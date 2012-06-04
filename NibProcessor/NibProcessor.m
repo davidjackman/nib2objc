@@ -88,20 +88,21 @@
     NSPipe *pipe = [NSPipe pipe];
     NSFileHandle *readHandle = [pipe fileHandleForReading];
     NSData *temp = nil;
-
+	
     [_data release];
     _data = [[NSMutableData alloc] init];
     
     [task setLaunchPath:@"/usr/bin/ibtool"];
     [task setArguments:arguments];
     [task setStandardOutput:pipe];
+	[task setStandardInput:[NSPipe pipe]];
     [task launch];
     
     while ((temp = [readHandle availableData]) && [temp length]) 
     {
         [_data appendData:temp];
     }
-
+	
     // This dictionary is ready to be parsed, and it contains
     // everything we need from the NIB file.
     _dictionary = [[self inputAsDictionary] retain];
@@ -112,17 +113,17 @@
 - (void)process
 {
     //    NSDictionary *nibClasses = [dict objectForKey:@"com.apple.ibtool.document.classes"];
-    //    NSDictionary *nibConnections = [dict objectForKey:@"com.apple.ibtool.document.connections"];
-    NSDictionary *nibObjects = [_dictionary objectForKey:@"com.apple.ibtool.document.objects"];
-    NSMutableDictionary *objects = [[NSMutableDictionary alloc] init];
+    NSDictionary * nibConnections = [_dictionary objectForKey:@"com.apple.ibtool.document.connections"];
+    NSDictionary * nibObjects     = [_dictionary objectForKey:@"com.apple.ibtool.document.objects"];
+    NSMutableDictionary * objects = [[NSMutableDictionary alloc] init];
     
     for (NSDictionary *key in nibObjects)
     {
         id object = [nibObjects objectForKey:key];
         NSString *klass = [object objectForKey:@"class"];
-
+		
         Processor *processor = [Processor processorForClass:klass];
-
+		
         if (processor == nil)
         {
 #ifdef CONFIGURATION_Debug
@@ -165,7 +166,7 @@
         id constructor = [object objectForKey:@"constructor"];
         NSString *instanceName = [self instanceNameForObject:object];
         [_output appendFormat:@"%@ *%@%@ = %@;\n", klass, instanceName, identifierKey, constructor];
-                
+		
         // Then, output the properties only, ordered alphabetically
         orderedKeys = [[object allKeys] sortedArrayUsingSelector:@selector(caseInsensitiveCompare:)];
         for (NSString *key in orderedKeys)
@@ -173,10 +174,8 @@
             id value = [object objectForKey:key];
             if (![key hasPrefix:@"__method__"] 
                 && ![key isEqualToString:@"constructor"] && ![key isEqualToString:@"class"]
-                && ![key hasPrefix:@"__helper__"])
-            {
-                switch (self.codeStyle) 
-                {
+                && ![key hasPrefix:@"__helper__"]) {
+                switch (self.codeStyle) {
                     case NibProcessorCodeStyleProperties:
                         [_output appendFormat:@"%@%@.%@ = %@;\n", instanceName, identifierKey, key, value];
                         break;
@@ -188,32 +187,107 @@
                     default:
                         break;
                 }
-            }
-        }
+				
+			}
+		}
+		
+		// Finally, output the method calls, ordered alphabetically
+		orderedKeys = [object keysSortedByValueUsingSelector:@selector(caseInsensitiveCompare:)];
+		for (NSString *key in orderedKeys)
+		{
+			id value = [object objectForKey:key];
+			if ([key hasPrefix:@"__method__"])
+			{
+				[_output appendFormat:@"[%@%@ %@];\n", instanceName, identifierKey, value];
+			}
+		}
+		[_output appendString:@"\n"];    
+	}
+	
+	// Now that the objects are created, recreate the hierarchy of the NIB
+	NSArray *nibHierarchy = [_dictionary objectForKey:@"com.apple.ibtool.document.hierarchy"];
+	for (NSDictionary *item in nibHierarchy)
+	{
+		int currentView = [[item objectForKey:@"object-id"] intValue];
+		[self parseChildren:item ofCurrentView:currentView withObjects:objects];
+	}
+	[_output appendString:@"\n"];
+	
+	// Now that we have all the objects and their heierarchy we need to make the connections
+	for (NSString *connectionKey in [nibConnections allKeys]) {
+		NSDictionary      * currentConnection   = nil;
+		currentConnection = [nibConnections objectForKey:connectionKey];
+		
+		if (currentConnection != nil) {
+			[self processConnection:currentConnection withObjects:objects];
+		}
+	}
+	[_output appendString:@"\n"];
+	
+	// Now if we are not using arc lets release all the objects
+	BOOL useARC = [[NSUserDefaults standardUserDefaults] boolForKey:@"useARC"];
+	if(useARC == NO) {
+		for(NSString * objectKey in [objects allKeys]) {
+			if ([objectKey intValue] >= 0) {
+				id object = [objects objectForKey:objectKey];
+				NSString * instanceName = [self instanceNameForObject:object];
+				[_output appendFormat:@"[%@%@ release];\n", instanceName, objectKey];
+			}
+		}
+	}
+	
+	[objects release];
+	objects = nil;
+}
 
-        // Finally, output the method calls, ordered alphabetically
-        orderedKeys = [object keysSortedByValueUsingSelector:@selector(caseInsensitiveCompare:)];
-        for (NSString *key in orderedKeys)
-        {
-            id value = [object objectForKey:key];
-            if ([key hasPrefix:@"__method__"])
-            {
-                [_output appendFormat:@"[%@%@ %@];\n", instanceName, identifierKey, value];
-            }
-        }
-        [_output appendString:@"\n"];    
-    }
-    
-    // Now that the objects are created, recreate the hierarchy of the NIB
-    NSArray *nibHierarchy = [_dictionary objectForKey:@"com.apple.ibtool.document.hierarchy"];
-    for (NSDictionary *item in nibHierarchy)
-    {
-        int currentView = [[item objectForKey:@"object-id"] intValue];
-        [self parseChildren:item ofCurrentView:currentView withObjects:objects];
-    }
-    
-    [objects release];
-    objects = nil;
+- (void)processConnection:(NSDictionary *)connection withObjects:(NSDictionary *)objects
+{
+	NSString * sourceID             = nil;
+	NSString * destinationID        = nil;
+	NSString * sourceClassName      = nil;
+	NSString * destinationClassName = nil;
+	NSString * fileClassName        = nil;
+	NSString * propertyLabel        = nil;
+	NSString * instanceName         = nil;
+	id         sourceObject         = nil;
+	id         destinationObject    = nil;
+	NSString * valueLabel           = nil;
+	
+	sourceID = [connection objectForKey:@"source-id"];
+	if (sourceID != nil) {
+		sourceObject = [objects objectForKey:sourceID];
+	}
+	if (sourceObject != nil) {
+		sourceClassName = [sourceObject objectForKey:@"class"];
+	}
+	
+	destinationID = [connection objectForKey:@"destination-id"];
+	if (destinationID != nil) {
+		destinationObject = [objects objectForKey:destinationID];
+	}
+	if(destinationObject != nil) {
+		destinationClassName = [destinationObject objectForKey:@"class"];
+	}
+	
+	propertyLabel = [connection objectForKey:@"label"];            
+	fileClassName = [[[[_filename componentsSeparatedByString:@"/"] lastObject] componentsSeparatedByString:@"."] objectAtIndex:0];
+	instanceName  = [self instanceNameForObject:destinationObject];
+		
+	NSString *baseLabel = nil;
+	
+	if ([sourceClassName isEqualToString:fileClassName]) {
+		baseLabel = @"self";
+	} else {
+		baseLabel = [self instanceNameForObject:sourceObject];
+	}
+	
+	if ([destinationClassName isEqualToString:fileClassName]) {
+		valueLabel = @"self";
+	} else {
+		valueLabel = [NSString stringWithFormat:@"%@%@", instanceName, destinationID];
+	}
+	
+	[_output appendFormat:@"%@.%@ = %@;\n", baseLabel, propertyLabel, valueLabel];
 }
 
 - (void)parseChildren:(NSDictionary *)dict ofCurrentView:(int)currentView withObjects:(NSDictionary *)objects
@@ -224,7 +298,7 @@
         for (NSDictionary *subitem in children)
         {
             int subview = [[subitem objectForKey:@"object-id"] intValue];
-
+			
             id currentViewObject = [objects objectForKey:[NSString stringWithFormat:@"%d", currentView]];
             NSString *instanceName = [self instanceNameForObject:currentViewObject];
             

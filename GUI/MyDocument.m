@@ -95,10 +95,10 @@
 
 - (BOOL)readFromFile:(NSString *)fileName ofType:(NSString *)type
 {
-    self.fileName = fileName;
+	self.fileName = fileName;
     self.nibProcessor = [[[NibProcessor alloc] init] autorelease];
     self.nibProcessor.input = self.fileName;
-    [self.nibProcessor process];
+	[self.nibProcessor process];
     self.nibCode = self.nibProcessor.output;
     return YES;
 }
