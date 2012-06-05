@@ -161,10 +161,11 @@
             }
         }
 		
-		NSLog(@"Klass %@", object);
+		NSLog(@"Object %@", object);
         
         // Then, output the constructor
         id klass = [object objectForKey:@"class"];
+		NSLog(@"klass name : %@", klass);
         id constructor = nil;
 		constructor = [object objectForKey:@"constructor"];
         NSString *instanceName = [self instanceNameForObject:object];
@@ -275,7 +276,7 @@
 	}
 	
 	propertyLabel = [connection objectForKey:@"label"];            
-	fileClassName = [[[[_filename componentsSeparatedByString:@"/"] lastObject] componentsSeparatedByString:@"."] objectAtIndex:0];
+	fileClassName = [[[[[_filename componentsSeparatedByString:@"/"] lastObject] componentsSeparatedByString:@"."] objectAtIndex:0] stringByReplacingOccurrencesOfString:@"_" withString:@""];
 	instanceName  = [self instanceNameForObject:destinationObject];
 		
 	NSString *baseLabel = nil;
