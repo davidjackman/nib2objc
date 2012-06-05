@@ -189,7 +189,7 @@
 	NSString *constructorString = nil;
 	constructorString = [self constructorString];
 	if (constructorString != nil) {
-		[output setObject:[self constructorString] forKey:@"constructor"];
+		[output setObject:constructorString forKey:@"constructor"];
 	}
     
     NSString *frameString = [self frameString];

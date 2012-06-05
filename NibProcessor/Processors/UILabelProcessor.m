@@ -27,7 +27,7 @@
 {
     if ([item isEqualToString:@"text"])
     {
-        [output setObject:[value quotedAsCodeString] forKey:item];
+        [output setObject:[[value stringByReplacingOccurrencesOfString:@"\n" withString:@"\\n"] quotedAsCodeString] forKey:item];
     }
     else if ([item isEqualToString:@"textAlignment"])
     {

@@ -88,6 +88,9 @@
     {
         [output setObject:[value tableViewCellSelectionStyleString] forKey:item];
     }
+	else if ([item isEqualToString:@"custom-class"]) {
+		[output setObject:value forKey:@"custom-class"];
+	}
     else
     {
         [super processKey:item value:value];

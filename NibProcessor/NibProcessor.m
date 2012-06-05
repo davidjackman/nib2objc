@@ -180,7 +180,7 @@
             id value = [object objectForKey:key];
             if (![key hasPrefix:@"__method__"] 
                 && ![key isEqualToString:@"constructor"] && ![key isEqualToString:@"class"]
-                && ![key hasPrefix:@"__helper__"]) {
+                && ![key hasPrefix:@"__helper__"] && ![key isEqualToString:@"custom-class"]) {
                 switch (self.codeStyle) {
                     case NibProcessorCodeStyleProperties:
                         [_output appendFormat:@"%@%@.%@ = %@;\n", instanceName, identifierKey, key, value];
@@ -219,6 +219,24 @@
 	}
 	[_output appendString:@"\n"];
 	
+	// If this is a uitableviewcell then we need to connect it.
+	for (NSString *objectProcessorKey in objects) {
+		id          objectProcessor = [objects objectForKey:objectProcessorKey];
+		NSString  * customClass     = nil;
+		NSString  * fileClassName   = nil;
+		NSString  * instanceName    = nil;
+		customClass = [objectProcessor objectForKey:@"custom-class"];
+		fileClassName = [[[[[_filename componentsSeparatedByString:@"/"] lastObject] componentsSeparatedByString:@"."] objectAtIndex:0] stringByReplacingOccurrencesOfString:@"_" withString:@""];
+		
+		if (customClass != nil) {
+			instanceName = [self instanceNameForObject:objectProcessor];
+			if ([customClass isEqualToString:fileClassName]) {
+				[_output appendFormat:@"self = %@%@;\n", instanceName, objectProcessorKey];
+			}
+		}
+	}
+	[_output appendString:@"\n"];
+
 	// Now that we have all the objects and their heierarchy we need to make the connections
 	for (NSString *connectionKey in [nibConnections allKeys]) {
 		NSDictionary      * currentConnection   = nil;
@@ -229,18 +247,17 @@
 		}
 	}
 	[_output appendString:@"\n"];
-	
+		
 	// Now if we are not using arc lets release all the objects
-	BOOL useARC = [[NSUserDefaults standardUserDefaults] boolForKey:@"useARC"];
-	if(useARC == NO) {
-		for(NSString * objectKey in [objects allKeys]) {
-			if ([objectKey intValue] >= 0) {
-				id object = [objects objectForKey:objectKey];
-				NSString * instanceName = [self instanceNameForObject:object];
-				[_output appendFormat:@"[%@%@ release];\n", instanceName, objectKey];
-			}
+	[_output appendString:@"#if __has_feature(objc_arc)\n#else\n"];
+	for(NSString * objectKey in [objects allKeys]) {
+		if ([objectKey intValue] >= 0) {
+			id object = [objects objectForKey:objectKey];
+			NSString * instanceName = [self instanceNameForObject:object];
+			[_output appendFormat:@"[%@%@ release];\n", instanceName, objectKey];
 		}
 	}
+	[_output appendString:@"#endif\n"];
 	
 	[objects release];
 	objects = nil;
@@ -254,6 +271,7 @@
 	NSString * destinationClassName = nil;
 	NSString * fileClassName        = nil;
 	NSString * propertyLabel        = nil;
+	NSString * connectionType       = nil;
 	NSString * instanceName         = nil;
 	id         sourceObject         = nil;
 	id         destinationObject    = nil;
@@ -264,6 +282,9 @@
 		sourceObject = [objects objectForKey:sourceID];
 	}
 	if (sourceObject != nil) {
+		sourceClassName = [sourceObject objectForKey:@"custom-class"];
+	}
+	if (sourceClassName == nil) {
 		sourceClassName = [sourceObject objectForKey:@"class"];
 	}
 	
@@ -295,7 +316,15 @@
 		valueLabel = [[NSString alloc] initWithFormat:@"%@%d", instanceName, destinationIDAbsoluteIntegerValue];
 	}
 	
-	[_output appendFormat:@"%@.%@ = %@;\n", baseLabel, propertyLabel, valueLabel];
+	connectionType = [connection objectForKey:@"type"];
+	if([connectionType isEqualToString:@"IBCocoaTouchEventConnection"]) {
+		//	[tempButtonDeleteMe addTarget:self action:@selector(selector:) forControlEvents:UIControlEventTouchUpInside];
+//		NSString * touchUpInside = [connection objectForKey:@"Touch Up Inside"];
+		[_output appendFormat:@"[%@ addTarget:%@ action:@selector(%@) forControlEvent:%@];\n", baseLabel, valueLabel, propertyLabel, @"UIControlEventTouchUpInside"];
+	} else if ([connectionType isEqualToString:@"IBCocoaTouchOutletConnection"]) {
+		[_output appendFormat:@"%@.%@ = %@;\n", baseLabel, propertyLabel, valueLabel];
+	}
+
 	[baseLabel release];
 	[valueLabel release];
 }
