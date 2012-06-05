@@ -320,7 +320,7 @@
 	if([connectionType isEqualToString:@"IBCocoaTouchEventConnection"]) {
 		//	[tempButtonDeleteMe addTarget:self action:@selector(selector:) forControlEvents:UIControlEventTouchUpInside];
 //		NSString * touchUpInside = [connection objectForKey:@"Touch Up Inside"];
-		[_output appendFormat:@"[%@ addTarget:%@ action:@selector(%@) forControlEvent:%@];\n", baseLabel, valueLabel, propertyLabel, @"UIControlEventTouchUpInside"];
+		[_output appendFormat:@"[%@ addTarget:%@ action:@selector(%@) forControlEvents:%@];\n", baseLabel, valueLabel, propertyLabel, @"UIControlEventTouchUpInside"];
 	} else if ([connectionType isEqualToString:@"IBCocoaTouchOutletConnection"]) {
 		[_output appendFormat:@"%@.%@ = %@;\n", baseLabel, propertyLabel, valueLabel];
 	}
