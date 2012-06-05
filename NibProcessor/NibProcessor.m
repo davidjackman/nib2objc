@@ -160,12 +160,17 @@
                 [_output appendString:@"\n"];    
             }
         }
+		
+		NSLog(@"Klass %@", object);
         
         // Then, output the constructor
         id klass = [object objectForKey:@"class"];
-        id constructor = [object objectForKey:@"constructor"];
+        id constructor = nil;
+		constructor = [object objectForKey:@"constructor"];
         NSString *instanceName = [self instanceNameForObject:object];
-        [_output appendFormat:@"%@ *%@%@ = %@;\n", klass, instanceName, identifierKey, constructor];
+		if(constructor != nil) {
+			[_output appendFormat:@"%@ *%@%@ = %@;\n", klass, instanceName, identifierKey, constructor];
+		}
 		
         // Then, output the properties only, ordered alphabetically
         orderedKeys = [[object allKeys] sortedArrayUsingSelector:@selector(caseInsensitiveCompare:)];
@@ -276,18 +281,22 @@
 	NSString *baseLabel = nil;
 	
 	if ([sourceClassName isEqualToString:fileClassName]) {
-		baseLabel = @"self";
+		baseLabel = [[NSString alloc] initWithString:@"self"];
 	} else {
-		baseLabel = [self instanceNameForObject:sourceObject];
+		int sourceIDAbsoluteIntegerValue = abs([sourceID intValue]);
+		baseLabel = [[NSString alloc] initWithFormat:@"%@%d", [self instanceNameForObject:sourceObject], sourceIDAbsoluteIntegerValue];
 	}
 	
 	if ([destinationClassName isEqualToString:fileClassName]) {
-		valueLabel = @"self";
+		valueLabel = [[NSString alloc] initWithString:@"self"];
 	} else {
-		valueLabel = [NSString stringWithFormat:@"%@%@", instanceName, destinationID];
+		int destinationIDAbsoluteIntegerValue = abs([destinationID intValue]);
+		valueLabel = [[NSString alloc] initWithFormat:@"%@%d", instanceName, destinationIDAbsoluteIntegerValue];
 	}
 	
 	[_output appendFormat:@"%@.%@ = %@;\n", baseLabel, propertyLabel, valueLabel];
+	[baseLabel release];
+	[valueLabel release];
 }
 
 - (void)parseChildren:(NSDictionary *)dict ofCurrentView:(int)currentView withObjects:(NSDictionary *)objects

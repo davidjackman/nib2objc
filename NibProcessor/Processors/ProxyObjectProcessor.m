@@ -40,4 +40,13 @@
     }
 }
 
+- (NSString *)constructorString
+{
+    return nil;
+	
+	// Because there doesnt seem to be any use of this lets not use it for now.
+	// [NSString stringWithFormat:@"[[%@ alloc] init]", [self getProcessedClassName]];
+}
+
+
 @end

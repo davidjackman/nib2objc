@@ -186,7 +186,11 @@
 
     // Because of proxy objects, this call should be done at the end
     // when all the properties of the object have been parsed
-    [output setObject:[self constructorString] forKey:@"constructor"];
+	NSString *constructorString = nil;
+	constructorString = [self constructorString];
+	if (constructorString != nil) {
+		[output setObject:[self constructorString] forKey:@"constructor"];
+	}
     
     NSString *frameString = [self frameString];
     if (nil != frameString)
