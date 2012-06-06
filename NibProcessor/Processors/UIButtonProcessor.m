@@ -26,7 +26,7 @@
 - (NSString *)constructorString
 {
     NSString *style = [[self.input objectForKey:@"buttonType"] buttonTypeString];
-    return [NSString stringWithFormat:@"[%@ buttonWithType:%@]", [self getProcessedClassName], style];
+    return [NSString stringWithFormat:@"[[%@ buttonWithType:%@] retain]", [self getProcessedClassName], style];
 }
 
 - (void)processKey:(id)item value:(id)value
