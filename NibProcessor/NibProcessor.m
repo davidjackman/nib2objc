@@ -270,8 +270,15 @@
 	for(NSString * objectKey in [objects allKeys]) {
 		if ([objectKey intValue] >= 0) {
 			id object = [objects objectForKey:objectKey];
-			NSString * instanceName = [self instanceNameForObject:object];
-			[_output appendFormat:@"[%@%@ release];\n", instanceName, objectKey];
+			NSString * customClassName = nil;
+			NSString * fileClassName   = nil;
+			
+			customClassName = [object valueForKey:@"custom-class"];
+			fileClassName = [[[[[_filename componentsSeparatedByString:@"/"] lastObject] componentsSeparatedByString:@"."] objectAtIndex:0] stringByReplacingOccurrencesOfString:@"_" withString:@""];
+			if ( ! [customClassName isEqualToString:fileClassName]) {
+				NSString * instanceName = [self instanceNameForObject:object];
+				[_output appendFormat:@"[%@%@ release];\n", instanceName, objectKey];
+			}
 		}
 	}
 	[_output appendString:@"#endif\n"];
