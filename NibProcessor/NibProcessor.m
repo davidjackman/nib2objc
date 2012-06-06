@@ -170,10 +170,18 @@
 		constructor = [object objectForKey:@"constructor"];
         NSString *instanceName = [self instanceNameForObject:object];
 		if(constructor != nil) {
-			NSString * customClassName     = nil;
-			constructor = [[NSString alloc] initWithFormat:@"%@ *%@%@ = %@;\n", klass, instanceName, identifierKey, constructor];
+			NSString * customClassName = nil;
+			NSString * fileClassName   = nil;
+			
 			customClassName = [object valueForKey:@"custom-class"];
-			if(customClassName != nil) {
+			fileClassName = [[[[[_filename componentsSeparatedByString:@"/"] lastObject] componentsSeparatedByString:@"."] objectAtIndex:0] stringByReplacingOccurrencesOfString:@"_" withString:@""];
+
+			if([customClassName isEqualToString:fileClassName]) {
+				constructor = @"self";
+			}
+
+			constructor = [[NSString alloc] initWithFormat:@"%@ *%@%@ = %@;\n", klass, instanceName, identifierKey, constructor];
+			if (customClassName != nil) {
 				constructor = [constructor stringByReplacingOccurrencesOfString:klass withString:customClassName];
 			}
 			[_output appendString:constructor];
@@ -225,7 +233,9 @@
 	}
 	[_output appendString:@"\n"];
 	
-	// If this is a uitableviewcell then we need to connect it.
+
+	/*
+	 // If this is a uitableviewcell then we need to connect it.
 	for (NSString *objectProcessorKey in objects) {
 		id          objectProcessor = [objects objectForKey:objectProcessorKey];
 		NSString  * customClass     = nil;
@@ -242,7 +252,8 @@
 		}
 	}
 	[_output appendString:@"\n"];
-
+*/
+	
 	// Now that we have all the objects and their heierarchy we need to make the connections
 	for (NSString *connectionKey in [nibConnections allKeys]) {
 		NSDictionary      * currentConnection   = nil;
