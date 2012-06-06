@@ -170,7 +170,13 @@
 		constructor = [object objectForKey:@"constructor"];
         NSString *instanceName = [self instanceNameForObject:object];
 		if(constructor != nil) {
-			[_output appendFormat:@"%@ *%@%@ = %@;\n", klass, instanceName, identifierKey, constructor];
+			NSString * customClassName     = nil;
+			constructor = [[NSString alloc] initWithFormat:@"%@ *%@%@ = %@;\n", klass, instanceName, identifierKey, constructor];
+			customClassName = [object valueForKey:@"custom-class"];
+			if(customClassName != nil) {
+				constructor = [constructor stringByReplacingOccurrencesOfString:klass withString:customClassName];
+			}
+			[_output appendString:constructor];
 		}
 		
         // Then, output the properties only, ordered alphabetically
