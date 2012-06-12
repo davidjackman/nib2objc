@@ -197,7 +197,15 @@
                 && ![key hasPrefix:@"__helper__"] && ![key isEqualToString:@"custom-class"]) {
                 switch (self.codeStyle) {
                     case NibProcessorCodeStyleProperties:
-                        [_output appendFormat:@"%@%@.%@ = %@;\n", instanceName, identifierKey, key, value];
+						if([key hasPrefix:@"__IOS5ONLY__"]) {
+							NSString *shortKey = [[key componentsSeparatedByString:@"__IOS5ONLY__"] lastObject];
+							[_output appendFormat:@"if ([%@%@ respondsToSelector:@selector(%@)]) {\n", instanceName, identifierKey, shortKey];
+							[_output appendFormat:@"%@%@.%@ = %@;\n", instanceName, identifierKey, shortKey, value];
+							[_output appendFormat:@"}\n"];
+
+						} else {
+							[_output appendFormat:@"%@%@.%@ = %@;\n", instanceName, identifierKey, key, value];
+						}
                         break;
                         
                     case NibProcessorCodeStyleSetter:
@@ -232,27 +240,6 @@
 		[self parseChildren:item ofCurrentView:currentView withObjects:objects];
 	}
 	[_output appendString:@"\n"];
-	
-
-	/*
-	 // If this is a uitableviewcell then we need to connect it.
-	for (NSString *objectProcessorKey in objects) {
-		id          objectProcessor = [objects objectForKey:objectProcessorKey];
-		NSString  * customClass     = nil;
-		NSString  * fileClassName   = nil;
-		NSString  * instanceName    = nil;
-		customClass = [objectProcessor objectForKey:@"custom-class"];
-		fileClassName = [[[[[_filename componentsSeparatedByString:@"/"] lastObject] componentsSeparatedByString:@"."] objectAtIndex:0] stringByReplacingOccurrencesOfString:@"_" withString:@""];
-		
-		if (customClass != nil) {
-			instanceName = [self instanceNameForObject:objectProcessor];
-			if ([customClass isEqualToString:fileClassName]) {
-				[_output appendFormat:@"self = %@%@;\n", instanceName, objectProcessorKey];
-			}
-		}
-	}
-	[_output appendString:@"\n"];
-*/
 	
 	// Now that we have all the objects and their heierarchy we need to make the connections
 	for (NSString *connectionKey in [nibConnections allKeys]) {
@@ -342,8 +329,6 @@
 	
 	connectionType = [connection objectForKey:@"type"];
 	if([connectionType isEqualToString:@"IBCocoaTouchEventConnection"]) {
-		//	[tempButtonDeleteMe addTarget:self action:@selector(selector:) forControlEvents:UIControlEventTouchUpInside];
-//		NSString * touchUpInside = [connection objectForKey:@"Touch Up Inside"];
 		[_output appendFormat:@"[%@ addTarget:%@ action:@selector(%@) forControlEvents:%@];\n", baseLabel, valueLabel, propertyLabel, @"UIControlEventTouchUpInside"];
 	} else if ([connectionType isEqualToString:@"IBCocoaTouchOutletConnection"]) {
 		[_output appendFormat:@"%@.%@ = %@;\n", baseLabel, propertyLabel, valueLabel];
