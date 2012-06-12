@@ -50,14 +50,14 @@
     {
         [output setObject:[value intString] forKey:item];
     }
-    else if ([item isEqualToString:@"allowsMultipleSelection"])
-    {
-        [output setObject:[value booleanString] forKey:item];
-    }
-    else if ([item isEqualToString:@"allowsMultipleSelectionDuringEditing"])
-    {
-        [output setObject:[value booleanString] forKey:item];
-    }
+//    else if ([item isEqualToString:@"allowsMultipleSelection"]) // IOS 5 only
+//    {
+//        [output setObject:[value booleanString] forKey:item];
+//    }
+//    else if ([item isEqualToString:@"allowsMultipleSelectionDuringEditing"]) // ios 5 only
+//    {
+//        [output setObject:[value booleanString] forKey:item];
+//    }
     else if ([item isEqualToString:@"allowsSelection"])
     {
         [output setObject:[value booleanString] forKey:item];
